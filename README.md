@@ -1,19 +1,103 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern frontend project setup using React, TypeScript, and Vite for fast development, Hot Module Replacement (HMR), and optimized builds.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React for building UI components
+- TypeScript for static typing
+- Vite for fast bundling and development
+- Hot Module Replacement (HMR)
+- ESLint for code quality
+- Scalable project structure
+
+---
+
+## Available React Plugins
+
+This project supports the official Vite React plugins:
+
+### 1. @vitejs/plugin-react
+Uses Oxc for faster compilation and transformation.
+
+Installation:
+
+```bash
+npm install @vitejs/plugin-react
+```
+
+### 2. @vitejs/plugin-react-swc
+Uses SWC for faster Rust-based compilation.
+
+Installation:
+
+```bash
+npm install @vitejs/plugin-react-swc
+```
+
+---
+
+## Getting Started
+
+### Clone the Repository
+
+```bash
+git clone <repository-url>
+```
+
+Move into the project directory:
+
+```bash
+cd project-name
+```
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Run Development Server
+
+```bash
+npm run dev
+```
+
+The app will run locally at:
+
+```bash
+http://localhost:5173
+```
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+---
 
 ## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+React Compiler is disabled by default because it may impact development and build performance.
 
-## Expanding the ESLint configuration
+To enable it, follow the official React documentation:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+https://react.dev/learn/react-compiler/installation
+
+---
+
+## ESLint Configuration
+
+For production applications, enabling type-aware linting is recommended.
+
+Update your ESLint configuration:
 
 ```js
 export default defineConfig([
@@ -21,32 +105,41 @@ export default defineConfig([
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
       tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
 
-      // Other configs...
+      // For stricter rules
+      tseslint.configs.strictTypeChecked,
+
+      // Optional stylistic rules
+      tseslint.configs.stylisticTypeChecked,
     ],
+
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        project: [
+          './tsconfig.node.json',
+          './tsconfig.app.json'
+        ],
         tsconfigRootDir: import.meta.dirname,
       },
-      // other options...
     },
   },
 ])
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
+
+## React-specific ESLint Rules
+
+Install:
+
+```bash
+npm install eslint-plugin-react-x eslint-plugin-react-dom
+```
+
+Update `eslint.config.js`:
 
 ```js
-// eslint.config.js
 import reactX from 'eslint-plugin-react-x'
 import reactDom from 'eslint-plugin-react-dom'
 
@@ -54,20 +147,69 @@ export default defineConfig([
   globalIgnores(['dist']),
   {
     files: ['**/*.{ts,tsx}'],
+
     extends: [
-      // Other configs...
-      // Enable lint rules for React
       reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
       reactDom.configs.recommended,
     ],
+
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        project: [
+          './tsconfig.node.json',
+          './tsconfig.app.json'
+        ],
         tsconfigRootDir: import.meta.dirname,
       },
-      // other options...
     },
   },
 ])
 ```
+
+---
+
+## Project Structure
+
+```text
+project/
+│
+├── public/
+├── src/
+│   ├── assets/
+│   ├── components/
+│   ├── pages/
+│   ├── App.tsx
+│   └── main.tsx
+│
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+├── eslint.config.js
+└── README.md
+```
+
+---
+
+## Scripts
+
+```bash
+npm run dev       # Start development server
+npm run build     # Create production build
+npm run preview   # Preview production build
+npm run lint      # Run ESLint
+```
+
+---
+
+## Tech Stack
+
+- React
+- TypeScript
+- Vite
+- ESLint
+
+---
+
+## License
+
+This project is licensed under the MIT License.
