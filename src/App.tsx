@@ -4,11 +4,25 @@ import { Message } from './components/Message';
 import type { MessageProps } from './components/Message';
 import { InputArea } from './components/InputArea';
 import { getGeminiClient, fileToGenerativePart } from './lib/gemini';
+import type { Part } from '@google/generative-ai';
+import { validateImage } from './lib/attachments';
 import './App.css';
 
 function App() {
   const [messages, setMessages] = useState<MessageProps[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const requestActive = useRef(false);
+  const mounted = useRef(true);
+  const imageUrls = useRef(new Set<string>());
+  useEffect(() => {
+    mounted.current = true;
+    const urls = imageUrls.current;
+    return () => {
+      mounted.current = false;
+      for (const url of urls) URL.revokeObjectURL(url);
+      urls.clear();
+    };
+  }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -20,29 +34,27 @@ function App() {
   }, [messages, isLoading]);
 
   const handleSendMessage = async (text: string, imageFile: File | null) => {
-    let imageUrl;
-    if (imageFile) {
-      imageUrl = URL.createObjectURL(imageFile);
-    }
-
-    const userMessage: MessageProps = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: text,
-      imageUrl
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    if (requestActive.current || (!text.trim() && !imageFile) || !mounted.current) return;
+    requestActive.current = true;
     setIsLoading(true);
-
     try {
+      let imageUrl: string | undefined;
+      if (imageFile) {
+        validateImage(imageFile);
+        imageUrl = URL.createObjectURL(imageFile);
+        imageUrls.current.add(imageUrl);
+      }
+      const userMessage: MessageProps = {
+        id: crypto.randomUUID(), role: 'user', content: text, imageUrl,
+      };
+      setMessages((prev) => [...prev, userMessage]);
       const ai = getGeminiClient();
       const model = ai.getGenerativeModel({ 
         model: 'gemini-flash-latest',
         systemInstruction: "You are a helpful AI assistant. You were created by Ayush. If anyone asks who created you, who made you, or who programmed you, you must tell them that Ayush made you."
       });
       
-      const contents: any[] = [];
+      const contents: (string | Part)[] = [];
       if (text.trim()) {
         contents.push(text);
       }
@@ -61,22 +73,21 @@ function App() {
       const responseText = result.response.text();
 
       const modelMessage: MessageProps = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         role: 'model',
         content: responseText || 'I could not generate a response.',
       };
 
-      setMessages((prev) => [...prev, modelMessage]);
-    } catch (error: any) {
-      console.error('Gemini API Error:', error);
+      if (mounted.current) setMessages((prev) => [...prev, modelMessage]);
+    } catch {
       const errorMessage: MessageProps = {
-        id: (Date.now() + 1).toString(),
-        role: 'model',
-        content: `**Error:** ${error.message || 'Something went wrong. Please check your API key and try again.'}`,
+        id: crypto.randomUUID(), role: 'model',
+        content: '**Error:** Request failed. Check your API key, connection and image, then try again.',
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      if (mounted.current) setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false);
+      requestActive.current = false;
+      if (mounted.current) setIsLoading(false);
     }
   };
 
