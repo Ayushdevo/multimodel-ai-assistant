@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Image as ImageIcon, X } from 'lucide-react';
 import './InputArea.css';
+import { IMAGE_TYPES, validateImage } from '../lib/attachments';
 
 interface InputAreaProps {
   onSendMessage: (text: string, imageFile: File | null) => void;
@@ -11,6 +12,8 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, disabled })
   const [text, setText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState('');
+  const previewUrl = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -21,23 +24,32 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, disabled })
     }
   }, [text]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  useEffect(() => () => {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+  }, []);
 
   const removeImage = () => {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+    previewUrl.current = null;
     setImageFile(null);
     setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || disabled) return;
+    try {
+      validateImage(file);
+      const url = URL.createObjectURL(file);
+      if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+      previewUrl.current = url;
+      setImageFile(file);
+      setImagePreview(url);
+      setImageError('');
+    } catch (error) {
+      removeImage();
+      setImageError(error instanceof Error ? error.message : 'Could not attach image.');
     }
   };
 
@@ -51,7 +63,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, disabled })
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -59,10 +71,11 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, disabled })
 
   return (
     <form className="input-area-container glass" onSubmit={handleSubmit}>
+      {imageError && <p role="alert">{imageError}</p>}
       {imagePreview && (
         <div className="image-preview-container">
           <img src={imagePreview} alt="Preview" className="image-preview" />
-          <button type="button" className="remove-image-btn" onClick={removeImage}>
+          <button type="button" className="remove-image-btn" onClick={removeImage} disabled={disabled} aria-label="Remove image">
             <X size={16} />
           </button>
         </div>
@@ -79,7 +92,8 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, disabled })
         </button>
         <input
           type="file"
-          accept="image/*"
+          accept={IMAGE_TYPES.join(',')}
+          disabled={disabled}
           ref={fileInputRef}
           style={{ display: 'none' }}
           onChange={handleImageChange}
@@ -89,12 +103,14 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, disabled })
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
+          aria-label="Message"
           placeholder="Ask a coding question or upload an image..."
           disabled={disabled}
           rows={1}
           className="text-input"
         />
         <button
+          aria-label="Send message"
           type="submit"
           className="send-btn"
           disabled={disabled || (!text.trim() && !imageFile)}
