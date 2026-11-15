@@ -31,10 +31,27 @@ export const Message: React.FC<{ message: MessageProps }> = ({ message }) => {
   const isUser = message.role === 'user';
   const [copiedCode, setCopiedCode] = React.useState<string | null>(null);
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedCode(text);
-    setTimeout(() => setCopiedCode(null), 2000);
+  const [copyError, setCopyError] = React.useState('');
+  const copyTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyAttempt = React.useRef(0);
+  React.useEffect(() => () => {
+    copyAttempt.current += 1;
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+  }, []);
+
+  const handleCopy = async (text: string) => {
+    const attempt = ++copyAttempt.current;
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    setCopiedCode(null);
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(text);
+      if (copyAttempt.current !== attempt) return;
+      setCopiedCode(text);
+      copyTimer.current = setTimeout(() => setCopiedCode(null), 2000);
+    } catch {
+      if (copyAttempt.current === attempt) setCopyError('Copy failed. Select the code and copy it manually.');
+    }
   };
 
   return (
@@ -49,14 +66,15 @@ export const Message: React.FC<{ message: MessageProps }> = ({ message }) => {
           </div>
         )}
         <div className="markdown-body">
+          {copyError && <p role="alert">{copyError}</p>}
           <ReactMarkdown
             components={{
-              code({ node, inline, className, children, ...props }: any) {
+              code({ className, children }) {
                 const match = /language-(\w+)/.exec(className || '');
                 const language = match ? match[1] : '';
                 const codeString = String(children).replace(/\n$/, '');
                 
-                if (!inline && language) {
+                if (language) {
                   return (
                     <div className="code-block-wrapper">
                       <div className="code-block-header">
@@ -65,12 +83,12 @@ export const Message: React.FC<{ message: MessageProps }> = ({ message }) => {
                           className="copy-button"
                           onClick={() => handleCopy(codeString)}
                           title="Copy code"
+                          aria-label={copiedCode === codeString ? 'Copied' : 'Copy code'}
                         >
                           {copiedCode === codeString ? <Check size={16} color="#4ade80" /> : <Copy size={16} />}
                         </button>
                       </div>
                       <SyntaxHighlighter
-                        {...props}
                         style={vscDarkPlus}
                         language={language}
                         PreTag="div"
@@ -82,7 +100,7 @@ export const Message: React.FC<{ message: MessageProps }> = ({ message }) => {
                   );
                 }
                 return (
-                  <code {...props} className={className}>
+                  <code className={className}>
                     {children}
                   </code>
                 );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Key, Save } from 'lucide-react';
 import './SettingsModal.css';
 
@@ -8,24 +8,24 @@ interface SettingsModalProps {
   onSave: (apiKey: string) => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave }) => {
-  const [apiKey, setApiKey] = useState('');
-
-  useEffect(() => {
-    const savedKey = localStorage.getItem('gemini_api_key');
-    if (savedKey) {
-      setApiKey(savedKey);
-    }
-  }, [isOpen]);
+const SettingsForm: React.FC<Omit<SettingsModalProps, 'isOpen'>> = ({ onClose, onSave }) => {
+  const [apiKey, setApiKey] = useState(() => {
+    try { return localStorage.getItem('gemini_api_key') || ''; }
+    catch { return ''; }
+  });
+  const [error, setError] = useState('');
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('gemini_api_key', apiKey);
-    onSave(apiKey);
+    try {
+      localStorage.setItem('gemini_api_key', apiKey.trim());
+    } catch {
+      setError('Browser storage is unavailable. Your key could not be saved.');
+      return;
+    }
+    onSave(apiKey.trim());
     onClose();
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
@@ -35,6 +35,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
           <button className="close-btn" onClick={onClose}><X size={20} /></button>
         </div>
         <form onSubmit={handleSave} className="modal-body">
+          {error && <p role="alert">{error}</p>}
           <div className="input-group">
             <label htmlFor="apiKey">Gemini API Key</label>
             <input
@@ -46,7 +47,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
               required
             />
             <p className="help-text">
-              Your API key is stored securely in your browser's local storage and is never sent to any server other than Google's.
+              Your key is stored in this browser's local storage. Other scripts on this origin can access it; use a restricted key on a trusted device.
             </p>
           </div>
           <div className="modal-footer">
@@ -58,3 +59,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
     </div>
   );
 };
+
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave }) =>
+  isOpen ? <SettingsForm onClose={onClose} onSave={onSave} /> : null;
