@@ -44,3 +44,28 @@ it('releases message image URLs on unmount and ignores late completion', async (
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:chat');
   await act(async () => resolve({ response: { text: () => 'late' } }));
 });
+it('passes successful turns to follow-ups and excludes failed turns', async () => {
+  mocks.generate.mockResolvedValueOnce({ response: { text: () => 'first response' } })
+    .mockRejectedValueOnce(new Error('network'))
+    .mockResolvedValueOnce({ response: { text: () => 'third response' } });
+  render(<App />);
+  fireEvent.click(screen.getByText('Send twice'));
+  await screen.findByText('first response');
+  fireEvent.click(screen.getByText('Follow up'));
+  await screen.findByText(/Request failed/);
+  fireEvent.click(screen.getByText('Follow up'));
+  await screen.findByText('third response');
+  const contents = mocks.generate.mock.calls[2][0].contents;
+  expect(contents.map((turn: { role: string }) => turn.role)).toEqual(['user', 'model', 'user']);
+  expect(contents[1].parts).toEqual([{ text: 'first response' }]);
+});
+it('treats blank model output as a failed turn', async () => {
+  mocks.generate.mockResolvedValueOnce({ response: { text: () => '  ' } })
+    .mockResolvedValueOnce({ response: { text: () => 'ok' } });
+  render(<App />);
+  fireEvent.click(screen.getByText('Send twice'));
+  await screen.findByText(/Request failed/);
+  fireEvent.click(screen.getByText('Follow up'));
+  await screen.findByText('ok');
+  expect(mocks.generate.mock.calls[1][0].contents).toHaveLength(1);
+});

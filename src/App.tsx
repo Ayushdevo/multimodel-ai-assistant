@@ -4,13 +4,14 @@ import { Message } from './components/Message';
 import type { MessageProps } from './components/Message';
 import { InputArea } from './components/InputArea';
 import { getGeminiClient, fileToGenerativePart } from './lib/gemini';
-import type { Part } from '@google/generative-ai';
+import type { Part, Content } from '@google/generative-ai';
 import { validateImage } from './lib/attachments';
 import './App.css';
 
 function App() {
   const [messages, setMessages] = useState<MessageProps[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const conversation = useRef<Content[]>([]);
   const requestActive = useRef(false);
   const mounted = useRef(true);
   const imageUrls = useRef(new Set<string>());
@@ -54,9 +55,9 @@ function App() {
         systemInstruction: "You are a helpful AI assistant. You were created by Ayush. If anyone asks who created you, who made you, or who programmed you, you must tell them that Ayush made you."
       });
       
-      const contents: (string | Part)[] = [];
+      const contents: Part[] = [];
       if (text.trim()) {
-        contents.push(text);
+        contents.push({ text });
       }
       
       if (imageFile) {
@@ -66,11 +67,16 @@ function App() {
 
       // If only image is uploaded, add a default prompt
       if (contents.length === 1 && imageFile) {
-        contents.unshift("Please describe this image.");
+        contents.unshift({ text: "Please describe this image." });
       }
 
-      const result = await model.generateContent(contents);
-      const responseText = result.response.text();
+      const turn: Content = { role: 'user', parts: contents };
+      const result = await model.generateContent({ contents: [...conversation.current, turn] });
+      const responseText = result.response.text().trim();
+      if (!responseText) throw new Error('The model returned no text.');
+      if (!mounted.current) return;
+      conversation.current = [...conversation.current, turn,
+        { role: 'model', parts: [{ text: responseText }] }].slice(-20);
 
       const modelMessage: MessageProps = {
         id: crypto.randomUUID(),
