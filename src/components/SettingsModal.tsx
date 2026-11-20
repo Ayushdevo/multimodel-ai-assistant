@@ -17,22 +17,27 @@ const SettingsForm: React.FC<Omit<SettingsModalProps, 'isOpen'>> = ({ onClose, o
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const key = apiKey.trim();
+    if (!key) {
+      setError('Enter a Gemini API key.');
+      return;
+    }
     try {
-      localStorage.setItem('gemini_api_key', apiKey.trim());
+      localStorage.setItem('gemini_api_key', key);
     } catch {
       setError('Browser storage is unavailable. Your key could not be saved.');
       return;
     }
-    onSave(apiKey.trim());
+    onSave(key);
     onClose();
   };
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content glass">
+      <div className="modal-content glass" role="dialog" aria-labelledby="settings-title">
         <div className="modal-header">
-          <h2><Key size={20} /> Settings</h2>
-          <button className="close-btn" onClick={onClose}><X size={20} /></button>
+          <h2 id="settings-title"><Key size={20} /> Settings</h2>
+          <button type="button" className="close-btn" aria-label="Close settings" onClick={onClose}><X size={20} /></button>
         </div>
         <form onSubmit={handleSave} className="modal-body">
           {error && <p role="alert">{error}</p>}
