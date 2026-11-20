@@ -70,7 +70,7 @@ export const Message: React.FC<{ message: MessageProps }> = ({ message }) => {
           <ReactMarkdown
             components={{
               code({ className, children }) {
-                const match = /language-(\w+)/.exec(className || '');
+                const match = /(?:^|\s)language-(\S+)/.exec(className || '');
                 const language = match ? match[1] : '';
                 const codeString = String(children).replace(/\n$/, '');
                 
