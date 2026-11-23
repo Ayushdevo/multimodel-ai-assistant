@@ -58,6 +58,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, disabled })
     if ((text.trim() || imageFile) && !disabled) {
       onSendMessage(text, imageFile);
       setText('');
+      setImageError('');
       removeImage();
     }
   };
