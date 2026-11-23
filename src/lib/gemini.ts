@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const getGeminiClient = () => {
   // Uses Vite environment variables from .env
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim();
 
   if (!apiKey) {
     throw new Error('Set VITE_GEMINI_API_KEY in your .env.local file and restart the app.');
