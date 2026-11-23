@@ -44,6 +44,15 @@ it('releases message image URLs on unmount and ignores late completion', async (
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:chat');
   await act(async () => resolve({ response: { text: () => 'late' } }));
 });
+it('skips the model call when an image read finishes after unmount', async () => {
+  let finishRead!: (part: unknown) => void;
+  mocks.read.mockReturnValue(new Promise((resolve) => { finishRead = resolve; }));
+  const { unmount } = render(<App />);
+  fireEvent.click(screen.getByText('Image'));
+  unmount();
+  await act(async () => finishRead({ inlineData: { data: 'eA==', mimeType: 'image/png' } }));
+  expect(mocks.generate).not.toHaveBeenCalled();
+});
 it('passes successful turns to follow-ups and excludes failed turns', async () => {
   mocks.generate.mockResolvedValueOnce({ response: { text: () => 'first response' } })
     .mockRejectedValueOnce(new Error('network'))

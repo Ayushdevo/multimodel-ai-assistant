@@ -62,6 +62,7 @@ function App() {
       
       if (imageFile) {
         const imagePart = await fileToGenerativePart(imageFile);
+        if (!mounted.current) return;
         contents.push(imagePart);
       }
 
